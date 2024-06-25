@@ -14,6 +14,12 @@ let modifiedCells = new Set();
 let displayMode = "black-white"; // Modes: 'black-white' or 'white-black'
 
 let spaceKeyDown = false; // Variable pour suivre l'état de la touche espace
+let lastMouseX = 0;
+let lastMouseY = 0;
+let startOffsetX = 0;
+let startOffsetY = 0;
+let cumulativeDeltaX = 0;
+let cumulativeDeltaY = 0;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -63,6 +69,10 @@ document.getElementById("speed").addEventListener("input", (event) => {
   }
 });
 
+document.getElementById("randomSoup").addEventListener("click", () => {
+  generateRandomSoup();
+});
+
 canvas.addEventListener("mousedown", (event) => {
   mouseDown = true;
   modifiedCells.clear(); // Clear the set of modified cells at the start of a new drag
@@ -77,6 +87,20 @@ canvas.addEventListener("mousemove", (event) => {
   if (mouseDown) {
     drawCellIfNotModified(event);
   }
+
+  // Suivre la position de la souris si la touche espace est enfoncée
+  if (spaceKeyDown) {
+    const deltaX = event.clientX - lastMouseX;
+    const deltaY = event.clientY - lastMouseY;
+    cumulativeDeltaX += deltaX;
+    cumulativeDeltaY += deltaY;
+    offsetX = startOffsetX + cumulativeDeltaX;
+    offsetY = startOffsetY + cumulativeDeltaY;
+    drawGrid();
+  }
+
+  lastMouseX = event.clientX;
+  lastMouseY = event.clientY;
 });
 
 canvas.addEventListener("wheel", (event) => {
@@ -97,8 +121,14 @@ canvas.addEventListener("wheel", (event) => {
 
 // Gestion de la touche Espace pour le déplacement
 document.addEventListener("keydown", (event) => {
-  if (event.code === "Space") {
+  if (event.code === "Space" && !spaceKeyDown) {
     spaceKeyDown = true;
+    startOffsetX = offsetX;
+    startOffsetY = offsetY;
+    cumulativeDeltaX = 0;
+    cumulativeDeltaY = 0;
+    lastMouseX = event.clientX;
+    lastMouseY = event.clientY;
   }
 });
 
@@ -154,12 +184,6 @@ function drawGrid() {
   });
 
   ctx.restore();
-
-  // Si la touche espace est enfoncée, déplacez la vue
-  if (spaceKeyDown) {
-    offsetX += 10; // Ajustez la valeur de décalage comme nécessaire
-    drawGrid(); // Redessinez pour mettre à jour la vue
-  }
 }
 
 function getVisibleCells() {
@@ -202,6 +226,22 @@ function update() {
   }
 
   aliveCells = newAliveCells;
+  drawGrid();
+}
+
+function generateRandomSoup() {
+  aliveCells.clear();
+  const density = 0.4; // Densité de la soupe aléatoire (40% des cellules vivantes)
+  const numCells = Math.floor(
+    ((canvas.width * canvas.height) / (cellSize * cellSize)) * density
+  );
+
+  for (let i = 0; i < numCells; i++) {
+    const x = Math.floor(Math.random() * (canvas.width / (cellSize * scale)));
+    const y = Math.floor(Math.random() * (canvas.height / (cellSize * scale)));
+    aliveCells.add(`${x},${y}`);
+  }
+
   drawGrid();
 }
 
