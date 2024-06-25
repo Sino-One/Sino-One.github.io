@@ -7,6 +7,9 @@ let running = false;
 let scale = 1;
 let offsetX = 0;
 let offsetY = 0;
+let speed = 500;
+let intervalId;
+let mouseDown = false;
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -19,16 +22,20 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 document.getElementById("start").addEventListener("click", () => {
-  running = true;
-  requestAnimationFrame(update);
+  if (!running) {
+    running = true;
+    intervalId = setInterval(update, speed);
+  }
 });
 
 document.getElementById("pause").addEventListener("click", () => {
   running = false;
+  clearInterval(intervalId);
 });
 
 document.getElementById("reset").addEventListener("click", () => {
   running = false;
+  clearInterval(intervalId);
   grid = createGrid();
   drawGrid();
 });
@@ -40,12 +47,26 @@ document.getElementById("resetZoom").addEventListener("click", () => {
   drawGrid();
 });
 
-canvas.addEventListener("click", (event) => {
-  const x = Math.floor((event.offsetX - offsetX) / (cellSize * scale));
-  const y = Math.floor((event.offsetY - offsetY) / (cellSize * scale));
-  if (x >= 0 && x < grid[0].length && y >= 0 && y < grid.length) {
-    grid[y][x] = !grid[y][x];
-    drawGrid();
+document.getElementById("speed").addEventListener("input", (event) => {
+  speed = 10000 - event.target.value;
+  if (running) {
+    clearInterval(intervalId);
+    intervalId = setInterval(update, speed);
+  }
+});
+
+canvas.addEventListener("mousedown", (event) => {
+  mouseDown = true;
+  drawCell(event);
+});
+
+canvas.addEventListener("mouseup", () => {
+  mouseDown = false;
+});
+
+canvas.addEventListener("mousemove", (event) => {
+  if (mouseDown) {
+    drawCell(event);
   }
 });
 
@@ -64,6 +85,15 @@ canvas.addEventListener("wheel", (event) => {
   offsetY = newOffsetY;
   drawGrid();
 });
+
+function drawCell(event) {
+  const x = Math.floor((event.offsetX - offsetX) / (cellSize * scale));
+  const y = Math.floor((event.offsetY - offsetY) / (cellSize * scale));
+  if (x >= 0 && x < grid[0].length && y >= 0 && y < grid.length) {
+    grid[y][x] = !grid[y][x];
+    drawGrid();
+  }
+}
 
 function createGrid() {
   const rows = Math.ceil(canvas.height / cellSize);
@@ -93,11 +123,8 @@ function drawGrid() {
 }
 
 function update() {
-  if (!running) return;
-
   grid = nextGeneration(grid);
   drawGrid();
-  requestAnimationFrame(update);
 }
 
 function nextGeneration(grid) {
